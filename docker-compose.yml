@@ -2,77 +2,39 @@ version: '3.8'
 
 services:
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: nostra-sqlserver
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrongPassword123!
+      - SA_PASSWORD=P@ssw0rd!Secure123
+      - MSSQL_PID=Developer
     ports:
       - "1433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
     healthcheck:
-      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "YourStrongPassword123!" -Q "SELECT 1" || exit 1
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "P@ssw0rd!Secure123" -Q "SELECT 1" -b -o /dev/null
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    networks:
-      - nostra-network
+    restart: unless-stopped
 
-  nostra-host:
+  # Add your application service here
+  api:
     build:
       context: .
       dockerfile: Dockerfile
-      target: host
-    ports:
-      - "5001:80"
-      - "5002:443"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultSqlConnection=Server=sqlserver;Database=Nostra_Dataload;User Id=sa;Password=YourStrongPassword123!;TrustServerCertificate=True;
-      - ConnectionStrings__TaskQueueConnection=Server=sqlserver;Database=Nostra_Dataload_Tasks;User Id=sa;Password=YourStrongPassword123!;TrustServerCertificate=True;
-      - ORLEANS_CLUSTERING_PROVIDER=AdoNet
-      - ORLEANS_CLUSTERING_INVARIANT=Microsoft.Data.SqlClient
-      - ORLEANS_CLUSTERING_CONNECTIONSTRING=Server=sqlserver;Database=Nostra_Orleans;User Id=sa;Password=YourStrongPassword123!;TrustServerCertificate=True;
     depends_on:
       sqlserver:
         condition: service_healthy
-    networks:
-      - nostra-network
-    healthcheck:
-      test: curl --fail http://localhost:80/healthz || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-
-  nostra-ui:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: ui
-    ports:
-      - "5003:80"
-      - "5004:443"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultSqlConnection=Server=sqlserver;Database=Nostra_Dataload;User Id=sa;Password=YourStrongPassword123!;TrustServerCertificate=True;
-      - ConnectionStrings__TaskQueueConnection=Server=sqlserver;Database=Nostra_Dataload_Tasks;User Id=sa;Password=YourStrongPassword123!;TrustServerCertificate=True;
-      - HostApiBaseUrl=http://nostra-host
-    depends_on:
-      - nostra-host
-    networks:
-      - nostra-network
-    healthcheck:
-      test: curl --fail http://localhost:80/healthz || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-
-networks:
-  nostra-network:
-    driver: bridge
+      - ConnectionStrings__DefaultSqlConnection=Server=sqlserver;Database=Nostra_Dataload;User Id=sa;Password=P@ssw0rd!Secure123;TrustServerCertificate=True;
+      - ConnectionStrings__TaskQueueConnection=Server=sqlserver;Database=Nostra_Dataload_Tasks;User Id=sa;Password=P@ssw0rd!Secure123;TrustServerCertificate=True;
+    ports:
+      - "5000:80"
+    restart: unless-stopped
 
 volumes:
   sqlserver-data:
