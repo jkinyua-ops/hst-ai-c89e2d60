@@ -1,20 +1,14 @@
-app = "nostra-dataload"
+app = "nostra-dataload-api"
 primary_region = "iad"
 kill_signal = "SIGINT"
 kill_timeout = "5s"
 
-[experimental]
-  auto_rollback = true
-
 [build]
   dockerfile = "Dockerfile"
-  target = "host"
 
 [env]
   ASPNETCORE_ENVIRONMENT = "Production"
   ASPNETCORE_URLS = "http://+:8080"
-  ORLEANS_CLUSTERING_PROVIDER = "AdoNet"
-  ORLEANS_CLUSTERING_INVARIANT = "Microsoft.Data.SqlClient"
 
 [http_service]
   internal_port = 8080
@@ -24,27 +18,32 @@ kill_timeout = "5s"
   min_machines_running = 1
   processes = ["app"]
 
-  [http_service.concurrency]
-    type = "connections"
-    hard_limit = 1000
-    soft_limit = 800
+[[services.ports]]
+  port = 80
+  handlers = ["http"]
+  force_https = true
 
-  [[http_service.checks]]
-    interval = "10s"
-    timeout = "5s"
-    grace_period = "30s"
-    method = "GET"
-    path = "/healthz"
-    protocol = "http"
-    tls_skip_verify = false
+[[services.ports]]
+  port = 443
+  handlers = ["tls", "http"]
 
-[metrics]
-  port = 8080
-  path = "/metrics"
+[[services.http_checks]]
+  interval = "10s"
+  timeout = "2s"
+  grace_period = "5s"
+  method = "get"
+  path = "/health/live"
+  protocol = "http"
+  tls_skip_verify = false
 
-[deploy]
-  release_command = "dotnet Nostra.DataLoad.Host.dll --apply-migrations"
+[services.concurrency]
+  type = "connections"
+  hard_limit = 1000
+  soft_limit = 800
 
-[mounts]
-  source = "nostra_data"
-  destination = "/data"
+[[vm.cpu_kind]]
+  count = 1
+  kind = "shared"
+
+[[vm.memory]]
+  size_mb = 1024
